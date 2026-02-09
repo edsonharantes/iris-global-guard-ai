@@ -7,7 +7,7 @@ services:
     cpuset: "0-1"
     build:
       context: iris
-      dockerfile: Dockerfile3
+      dockerfile: Dockerfile
       args:
         IRIS_IMAGE: intersystemsdc/irishealth-community:preview
     ports:

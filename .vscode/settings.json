@@ -1,0 +1,17 @@
+{
+    "objectscript.conn" :{
+      "ns": "%SYS",
+      "username": "_SYSTEM",
+      "password": "SYS",
+      "docker-compose": {
+        "service": "iris",
+        "internalPort": 52773
+      },
+      "active": false,
+      "links": {
+        "IRIS_SQL": "http://localhost:${port}/csp/sys/exp/%25CSP.UI.Portal.SQL.Home.zen",
+      }
+    },
+    "java.configuration.updateBuildConfiguration": "interactive"
+
+}
