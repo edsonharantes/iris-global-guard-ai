@@ -9,17 +9,28 @@ ClassMethod run() [ Language = python ]
     for dir in directories:
         list_of_globals = iris.cls("guard.SnapshotGenerator").listGlobals(dir)
         for global_info in list_of_globals:
-            snapshot = iris.cls("guard.GlobalSnapshot")._New()
-            snapshot.SnapshotDate = global_info["SnapshotDate"]
-            snapshot.GlobalName = global_info["GlobalName"]
-            snapshot.Location = global_info["Location"]
-            snapshot.AllocatedMB =global_info["AllocatedMB"]
-            snapshot.UsedMB = global_info["UsedMB"]
-            snapshot.Tables = global_info["Tables"]
-            snapshot.PrevSnapshotId = global_info["PrevSnapshotId"]
-            snapshot.GrowthMB = global_info["GrowthMB"]
-            snapshot.GrowthPct = global_info["GrowthPct"]
-            snapshot._Save()
+            try:
+                insert_stmt = iris.sql.prepare("""
+                    INSERT INTO guard.GlobalSnapshot (SnapshotDate, GlobalName, Location, AllocatedMB, UsedMB, Tables, PrevSnapshotId, GrowthMB, GrowthPct)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+                insert_stmt.execute(
+                    global_info["SnapshotDate"].isoformat(),
+                    global_info["GlobalName"],
+                    global_info["Location"],
+                    str(global_info["AllocatedMB"]),
+                    str(global_info["UsedMB"]),
+                    ",".join(global_info["Tables"]),
+                    global_info["PrevSnapshotId"] if global_info["PrevSnapshotId"] is not None else "",
+                    str(global_info["GrowthMB"]) if global_info["GrowthMB"] is not None else "",
+                    str(global_info["GrowthPct"]) if global_info["GrowthPct"] is not None else ""
+                )
+
+                print(f"Inserted snapshot for global {global_info['GlobalName']} in directory {dir}")
+                print(f" AllocatedMB: {global_info['AllocatedMB']}, UsedMB: {global_info['UsedMB']}")
+                print("--------------------------------------------------")
+            except Exception as ex:
+                print(ex)
 }
 
 ClassMethod listAllDirectories() As %List [ Language = python ]
@@ -70,8 +81,9 @@ ClassMethod listGlobals(directory As %String) As %List [ Language = python ]
         global_info["PrevSnapshotId"] = iris.cls("guard.SnapshotGenerator").getPreviousSnapshotId(global_name, directory)
         if global_info["PrevSnapshotId"] is not None:
             prev_snapshot = iris.cls("guard.GlobalSnapshot")._OpenId(global_info["PrevSnapshotId"])
-            global_info["GrowthMB"] = global_info["UsedMB"] - prev_snapshot.UsedMB
-            global_info["GrowthPct"] = (global_info["GrowthMB"] / prev_snapshot.UsedMB) * Decimal(100)
+            global_info["GrowthMB"] = global_info["UsedMB"] - Decimal(prev_snapshot.UsedMB)
+            if Decimal(prev_snapshot.UsedMB) > 0:
+                global_info["GrowthPct"] = (global_info["GrowthMB"] / Decimal(prev_snapshot.UsedMB)) * Decimal(100)
     
         list_of_globals.append(global_info)
 

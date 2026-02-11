@@ -1,17 +1,17 @@
 Class guard.GlobalSnapshot Extends %Persistent
 {
 
-Property SnapshotDate As %Date [ Required ];
+Property SnapshotDate As %DateTime [ Required ];
 
 Index IdxSnapshotDate On SnapshotDate;
 
-Property GlobalName As %String(MAXLEN = 255) [ Required ];
+Property GlobalName As %String [ Required ];
 
 Index IdxGlobalName On GlobalName;
 
 Index IdxGlobalTime On (GlobalName, SnapshotDate);
 
-Property Location As %String(MAXLEN = 128);
+Property Location As %String;
 
 Index IdxLocation On Location;
 
@@ -19,17 +19,17 @@ Index IdxLocationTime On (Location, SnapshotDate);
 
 Index IdxGlobalLocation On (GlobalName, Location);
 
-Property AllocatedMB As %Decimal;
+Property AllocatedMB As %String;
 
-Property UsedMB As %Decimal;
+Property UsedMB As %String;
 
-Property Tables As %List;
+Property Tables As %String(MAXLEN = 1000);
 
 Property PrevSnapshotId As %Integer;
 
-Property GrowthMB As %Decimal;
+Property GrowthMB As %String;
 
-Property GrowthPct As %Decimal;
+Property GrowthPct As %String;
 
 Storage Default
 {
