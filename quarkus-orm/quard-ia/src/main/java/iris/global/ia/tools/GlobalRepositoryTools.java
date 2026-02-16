@@ -7,9 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import dev.langchain4j.agent.tool.Tool;
-import io.quarkus.panache.common.Page;
 import iris.global.models.dto.GlobalSnapshotDTO;
-import iris.global.repository.GlobalSnapshotDateRepository;
 import jakarta.annotation.Nonnull;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -20,9 +18,6 @@ public class GlobalRepositoryTools {
 
   @Inject
   EntityManager em;
-
-  @Inject
-  GlobalSnapshotDateRepository globalSnapshotDateRepository;
 
   @Tool("""
       You are calling an analytical tool that identifies globals with the highest absolute disk growth.
@@ -149,14 +144,42 @@ public class GlobalRepositoryTools {
       double minGrowthPct,
       double minUsedMB) {
 
-    return globalSnapshotDateRepository
-        .find("""
-                growthPct >= ?1
-                and usedMB >= ?2
-                order by growthPct desc
-            """, minGrowthPct, minUsedMB)
-        .project(GlobalSnapshotDTO.class)
-        .list();
+    @SuppressWarnings("unchecked")
+    List<Object[]> rows = em.createNativeQuery("""
+            SELECT
+                CAST(ID AS BIGINT),
+                AllocatedMB,
+                GlobalName,
+                GrowthMB,
+                GrowthPct,
+                Location,
+                CAST(PrevSnapshotId AS BIGINT),
+                CAST(SnapshotDate AS DATE),
+                Tables,
+                UsedMB
+            FROM guard.GlobalSnapshot
+            WHERE GrowthPct >= :minGrowthPct
+            AND UsedMB >= :minUsedMB
+            ORDER BY GrowthPct DESC
+        """)
+        .setParameter("minGrowthPct", minGrowthPct)
+        .setParameter("minUsedMB", minUsedMB)
+        .getResultList();
+
+    return rows.stream()
+        .map(row -> new GlobalSnapshotDTO(
+            (Long) row[0],
+            row[1] == null ? null : new BigDecimal(row[1].toString()),
+            (String) row[2],
+            row[3] == null ? null : new BigDecimal(row[3].toString()),
+            row[4] == null ? null : new BigDecimal(row[4].toString()),
+            (String) row[5],
+            (Long) row[6],
+            (LocalDate) row[7],
+            (String) row[8],
+            row[9] == null ? null : new BigDecimal(row[9].toString())
+        ))
+        .toList();
   }
 
   @Tool("""
@@ -206,10 +229,40 @@ public class GlobalRepositoryTools {
         .toUpperCase()
         .replaceFirst("^\\^", "");
 
-    return globalSnapshotDateRepository
-        .find("globalName = ?1 order by snapshotDate asc", normalized)
-        .project(GlobalSnapshotDTO.class)
-        .list();
+    @SuppressWarnings("unchecked")
+    List<Object[]> rows = em.createNativeQuery("""
+            SELECT
+                CAST(ID AS BIGINT),
+                AllocatedMB,
+                GlobalName,
+                GrowthMB,
+                GrowthPct,
+                Location,
+                CAST(PrevSnapshotId AS BIGINT),
+                CAST(SnapshotDate AS DATE),
+                Tables,
+                UsedMB
+            FROM guard.GlobalSnapshot
+            WHERE GlobalName = :globalName
+            ORDER BY SnapshotDate ASC
+        """)
+        .setParameter("globalName", normalized)
+        .getResultList();
+
+    return rows.stream()
+        .map(row -> new GlobalSnapshotDTO(
+            (Long) row[0],
+            row[1] == null ? null : new BigDecimal(row[1].toString()),
+            (String) row[2],
+            row[3] == null ? null : new BigDecimal(row[3].toString()),
+            row[4] == null ? null : new BigDecimal(row[4].toString()),
+            (String) row[5],
+            (Long) row[6],
+            (LocalDate) row[7],
+            (String) row[8],
+            row[9] == null ? null : new BigDecimal(row[9].toString())
+        ))
+        .toList();
   }
 
   @Tool("""
@@ -256,16 +309,17 @@ public class GlobalRepositoryTools {
   public Map<String, Map<String, BigDecimal>> diskSUMGrowthByLocation(
       LocalDate snapshotDate) {
 
-    List<Object[]> rows = em.createQuery("""
+    @SuppressWarnings("unchecked")
+    List<Object[]> rows = em.createNativeQuery("""
         SELECT
                 Location,
                 SUM(UsedMB),
                 SUM(AllocatedMB),
                 SUM(GrowthMB)
             FROM guard.GlobalSnapshot
-            WHERE SnapshotDate = :dt
+            WHERE CAST(SnapshotDate AS DATE) = :dt
             GROUP BY Location
-        """, Object[].class)
+        """)
         .setParameter("dt", snapshotDate)
         .getResultList();
 
@@ -274,9 +328,9 @@ public class GlobalRepositoryTools {
     for (Object[] row : rows) {
       String location = (String) row[0];
 
-      BigDecimal usedMB = (BigDecimal) row[1];
-      BigDecimal allocatedMB = (BigDecimal) row[2];
-      BigDecimal growthMB = (BigDecimal) row[3];
+      BigDecimal usedMB = row[1] == null ? null : new BigDecimal(row[1].toString());
+      BigDecimal allocatedMB = row[2] == null ? null : new BigDecimal(row[2].toString());
+      BigDecimal growthMB = row[3] == null ? null : new BigDecimal(row[3].toString());
 
       Map<String, BigDecimal> metrics = new HashMap<>();
       metrics.put("usedMB", usedMB);

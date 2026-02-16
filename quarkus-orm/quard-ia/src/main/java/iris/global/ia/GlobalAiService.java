@@ -40,6 +40,9 @@ public interface GlobalAiService {
                 - Do **not guess** or infer parameters.
                 - If parameters are missing or ambiguous, **ask for clarification first**.
                 - Avoid unnecessary tool calls.
+                - Global names may include dots (`.`) and all parts of the name must be used exactly as provided.
+                - Do not truncate or split global names when calling tools.
+                - When a user provides a global name, always pass the full string to the tool, including any dots.
 
                 ANALYSIS RULES:
                 - Treat snapshot data as **point-in-time measurements**.
