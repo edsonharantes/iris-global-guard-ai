@@ -18,254 +18,275 @@ import jakarta.persistence.EntityManager;
 @ApplicationScoped
 public class GlobalRepositoryTools {
 
-        @Inject
-        EntityManager em;
+  @Inject
+  EntityManager em;
 
-        @Inject
-        GlobalSnapshotDateRepository globalSnapshotDateRepository;
+  @Inject
+  GlobalSnapshotDateRepository globalSnapshotDateRepository;
 
-        @Tool("""
-                        You are calling an analytical tool that identifies globals with the highest absolute disk growth.
+  @Tool("""
+      You are calling an analytical tool that identifies globals with the highest absolute disk growth.
 
-                        PURPOSE:
-                        Return the top globals that experienced the highest absolute disk growth (in MB)
-                        for a specific snapshot date.
+      PURPOSE:
+      Return the top globals that experienced the highest absolute disk growth (in MB)
+      for a specific snapshot date.
 
-                        This tool is optimized for answering questions about:
-                        - Which globals grew the most on a given day
-                        - Sudden disk consumption increases
-                        - Daily growth ranking of globals
+      This tool is optimized for answering questions about:
+      - Which globals grew the most on a given day
+      - Sudden disk consumption increases
+      - Daily growth ranking of globals
 
-                        WHEN TO USE:
-                        - When the user asks which globals grew the most
-                        - When the user asks about disk growth on a specific date
-                        - When performing daily or point-in-time growth analysis
-                        - When investigating unexpected disk usage spikes
+      WHEN TO USE:
+      - When the user asks which globals grew the most
+      - When the user asks about disk growth on a specific date
+      - When performing daily or point-in-time growth analysis
+      - When investigating unexpected disk usage spikes
 
-                        WHEN NOT TO USE:
-                        - Do NOT use for long-term historical trends
-                        - Do NOT use if the snapshot date is unknown
-                        - Do NOT use to compare multiple dates
-                        - Do NOT guess or infer dates
+      WHEN NOT TO USE:
+      - Do NOT use for long-term historical trends
+      - Do NOT use if the snapshot date is unknown
+      - Do NOT use to compare multiple dates
+      - Do NOT guess or infer dates
 
-                        PARAMETERS:
-                        - date (String) [required]
-                          Description: Snapshot date used to calculate growth.
-                          Format: ISO-8601 (yyyy-MM-dd).
-                          How to use: Must represent an existing snapshot date in the repository.
-                          Example: "2026-02-15"
+      PARAMETERS:
+      - date (String) [required]
+        Description: Snapshot date used to calculate growth.
+        Format: ISO-8601 (yyyy-MM-dd).
+        How to use: Must represent an existing snapshot date in the repository.
+        Example: "2026-02-15"
 
-                        RULES:
-                        - Only call this tool if the date is explicitly known.
-                        - Never infer or fabricate a date.
-                        - If the user refers to "today" or "yesterday", resolve it explicitly before calling.
-                        - If the date cannot be resolved, ask the user for clarification.
+      RULES:
+      - Only call this tool if the date is explicitly known.
+      - Never infer or fabricate a date.
+      - If the user refers to "today" or "yesterday", resolve it explicitly before calling.
+      - If the date cannot be resolved, ask the user for clarification.
 
-                        OUTPUT:
-                        Returns up to 20 globals ordered by absolute growth in MB (descending),
-                        mapped as GlobalSnapshotDTO.
-                        """)
+      OUTPUT:
+      Returns up to 20 globals ordered by absolute growth in MB (descending),
+      mapped as GlobalSnapshotDTO.
+      """)
 
-        @Nonnull
-        @SuppressWarnings("null")
-        public List<GlobalSnapshotDTO> topGrowingGlobals(String date) {
-                LocalDate snapshotDate = LocalDate.parse(date.trim());
+  @Nonnull
+  @SuppressWarnings("null")
+  public List<Map<String, Object>> topGrowingGlobals(String date) {
+    LocalDate snapshotDate = LocalDate.parse(date.trim());
 
-                return globalSnapshotDateRepository
-                                .find("snapshotDate = ?1 order by growthMB desc", snapshotDate)
-                                .page(Page.ofSize(20))
-                                .project(GlobalSnapshotDTO.class)
-                                .list();
-        }
+    @SuppressWarnings("unchecked")
+    List<Object[]> rows = em.createNativeQuery("""
+            SELECT TOP 20
+                GlobalName,
+                GrowthMB,
+                GrowthPct,
+                UsedMB,
+                Location
+            FROM guard.GlobalSnapshot
+            WHERE SnapshotDate = :dt
+            ORDER BY GrowthMB DESC
+        """)
+        .setParameter("dt", LocalDate.parse(snapshotDate.toString()))
+        .getResultList();
 
-        @Tool("""
-                        You are calling a risk assessment tool for IRIS globals.
+    return rows.stream()
+        .map(r -> {
+          Map<String, Object> m = new HashMap<>();
+          m.put("globalName", r[0]);
+          m.put("growthMB", r[1]);
+          m.put("growthPct", r[2]);
+          m.put("usedMB", r[3]);
+          m.put("location", r[4]);
+          return m;
+        })
+        .toList();
+  }
 
-                        PURPOSE:
-                        Identify globals that represent higher operational risk based on:
-                        - Minimum growth percentage
-                        - Minimum disk usage (MB)
+  @Tool("""
+      You are calling a risk assessment tool for IRIS globals.
 
-                        This tool helps detect globals that may cause disk exhaustion or
-                        require cleanup, archiving, or investigation.
+      PURPOSE:
+      Identify globals that represent higher operational risk based on:
+      - Minimum growth percentage
+      - Minimum disk usage (MB)
 
-                        WHEN TO USE:
-                        - When the user asks about risky, dangerous, or problematic globals
-                        - When identifying candidates for cleanup
-                        - When performing proactive disk risk analysis
-                        - When growth rate and size must be evaluated together
+      This tool helps detect globals that may cause disk exhaustion or
+      require cleanup, archiving, or investigation.
 
-                        WHEN NOT TO USE:
-                        - Do NOT use for absolute growth ranking
-                        - Do NOT use for single-global analysis
-                        - Do NOT use if thresholds are not explicitly defined
+      WHEN TO USE:
+      - When the user asks about risky, dangerous, or problematic globals
+      - When identifying candidates for cleanup
+      - When performing proactive disk risk analysis
+      - When growth rate and size must be evaluated together
 
-                        PARAMETERS:
-                        - minGrowthPct (double) [required]
-                          Description: Minimum growth percentage threshold.
-                          How to use: Value must represent percent growth (not fraction).
-                          Example: 15.0 means 15% growth.
+      WHEN NOT TO USE:
+      - Do NOT use for absolute growth ranking
+      - Do NOT use for single-global analysis
+      - Do NOT use if thresholds are not explicitly defined
 
-                        - minUsedMB (double) [required]
-                          Description: Minimum disk usage threshold in MB.
-                          How to use: Used to filter out small or insignificant globals.
-                          Example: 500.0
+      PARAMETERS:
+      - minGrowthPct (double) [required]
+        Description: Minimum growth percentage threshold.
+        How to use: Value must represent percent growth (not fraction).
+        Example: 15.0 means 15% growth.
 
-                        RULES:
-                        - Only call this tool if both thresholds are explicitly known.
-                        - Never invent threshold values.
-                        - If the user says "high growth" or "large globals" without numbers, ask for clarification.
-                        - Do not normalize or auto-scale values.
+      - minUsedMB (double) [required]
+        Description: Minimum disk usage threshold in MB.
+        How to use: Used to filter out small or insignificant globals.
+        Example: 500.0
 
-                        OUTPUT:
-                        Returns a list of globals ordered by growth percentage (descending),
-                        mapped as GlobalSnapshotDTO.
-                        """)
+      RULES:
+      - Only call this tool if both thresholds are explicitly known.
+      - Never invent threshold values.
+      - If the user says "high growth" or "large globals" without numbers, ask for clarification.
+      - Do not normalize or auto-scale values.
 
-        @Nonnull
-        @SuppressWarnings("null")
-        public List<GlobalSnapshotDTO> riskyGlobals(
-                        double minGrowthPct,
-                        double minUsedMB) {
+      OUTPUT:
+      Returns a list of globals ordered by growth percentage (descending),
+      mapped as GlobalSnapshotDTO.
+      """)
 
-                return globalSnapshotDateRepository
-                                .find("""
-                                                    growthPct >= ?1
-                                                    and usedMB >= ?2
-                                                    order by growthPct desc
-                                                """, minGrowthPct, minUsedMB)
-                                .project(GlobalSnapshotDTO.class)
-                                .list();
-        }
+  @Nonnull
+  @SuppressWarnings("null")
+  public List<GlobalSnapshotDTO> riskyGlobals(
+      double minGrowthPct,
+      double minUsedMB) {
 
-        @Tool("""
-                        You are calling a historical analysis tool for a single IRIS global.
+    return globalSnapshotDateRepository
+        .find("""
+                growthPct >= ?1
+                and usedMB >= ?2
+                order by growthPct desc
+            """, minGrowthPct, minUsedMB)
+        .project(GlobalSnapshotDTO.class)
+        .list();
+  }
 
-                        PURPOSE:
-                        Return the full historical growth timeline of a specific global,
-                        ordered chronologically.
+  @Tool("""
+      You are calling a historical analysis tool for a single IRIS global.
 
-                        This tool is designed for long-term analysis, anomaly detection,
-                        and understanding when abnormal growth started.
+      PURPOSE:
+      Return the full historical growth timeline of a specific global,
+      ordered chronologically.
 
-                        WHEN TO USE:
-                        - When the user asks about historical growth of a global
-                        - When analyzing long-term or seasonal behavior
-                        - When investigating when a global started growing abnormally
-                        - When performing root cause analysis
+      This tool is designed for long-term analysis, anomaly detection,
+      and understanding when abnormal growth started.
 
-                        WHEN NOT TO USE:
-                        - Do NOT use for ranking or comparison between globals
-                        - Do NOT use if the global name is unknown
-                        - Do NOT use for snapshot-only analysis
+      WHEN TO USE:
+      - When the user asks about historical growth of a global
+      - When analyzing long-term or seasonal behavior
+      - When investigating when a global started growing abnormally
+      - When performing root cause analysis
 
-                        PARAMETERS:
-                        - globalName (String) [required]
-                          Description: Name of the global to analyze.
-                          How to use:
-                            - Can be provided with or without '^'
-                            - Will be normalized internally
-                          Example: "^MyGlobal", "MyGlobal"
+      WHEN NOT TO USE:
+      - Do NOT use for ranking or comparison between globals
+      - Do NOT use if the global name is unknown
+      - Do NOT use for snapshot-only analysis
 
-                        RULES:
-                        - Only call this tool if the global name is explicitly known.
-                        - Never guess or infer a global name.
-                        - If the user refers to a global indirectly, ask for confirmation.
+      PARAMETERS:
+      - globalName (String) [required]
+        Description: Name of the global to analyze.
+        How to use:
+          - Can be provided with or without '^'
+          - Will be normalized internally
+        Example: "^MyGlobal", "MyGlobal"
 
-                        OUTPUT:
-                        Returns a chronological list of GlobalSnapshotDTO entries
-                        representing the full growth history of the global.
-                        """)
+      RULES:
+      - Only call this tool if the global name is explicitly known.
+      - Never guess or infer a global name.
+      - If the user refers to a global indirectly, ask for confirmation.
 
-        @Nonnull
-        @SuppressWarnings("null")
-        public List<GlobalSnapshotDTO> globalHistory(String globalName) {
+      OUTPUT:
+      Returns a chronological list of GlobalSnapshotDTO entries
+      representing the full growth history of the global.
+      """)
 
-                String normalized = globalName.trim()
-                                .toUpperCase()
-                                .replaceFirst("^\\^", "");
+  @Nonnull
+  @SuppressWarnings("null")
+  public List<GlobalSnapshotDTO> globalHistory(String globalName) {
 
-                return globalSnapshotDateRepository
-                                .find("globalName = ?1 order by snapshotDate asc", normalized)
-                                .project(GlobalSnapshotDTO.class)
-                                .list();
-        }
+    String normalized = globalName.trim()
+        .toUpperCase()
+        .replaceFirst("^\\^", "");
 
-        @Tool("""
-                        You are calling an aggregation tool that summarizes disk usage and growth
-                        by database location.
+    return globalSnapshotDateRepository
+        .find("globalName = ?1 order by snapshotDate asc", normalized)
+        .project(GlobalSnapshotDTO.class)
+        .list();
+  }
 
-                        PURPOSE:
-                        Aggregate disk usage and growth metrics by database location
-                        for a specific snapshot date.
+  @Tool("""
+      You are calling an aggregation tool that summarizes disk usage and growth
+      by database location.
 
-                        This tool provides a location-level view of disk consumption and growth,
-                        useful for capacity planning and storage monitoring.
+      PURPOSE:
+      Aggregate disk usage and growth metrics by database location
+      for a specific snapshot date.
 
-                        WHEN TO USE:
-                        - When the user asks about disk usage per database or location
-                        - When comparing growth across storage locations
-                        - When analyzing which disk or database is consuming more space
-                        - When performing capacity or infrastructure-level analysis
+      This tool provides a location-level view of disk consumption and growth,
+      useful for capacity planning and storage monitoring.
 
-                        WHEN NOT TO USE:
-                        - Do NOT use for per-global analysis
-                        - Do NOT use without a known snapshot date
-                        - Do NOT use for historical trends across multiple dates
+      WHEN TO USE:
+      - When the user asks about disk usage per database or location
+      - When comparing growth across storage locations
+      - When analyzing which disk or database is consuming more space
+      - When performing capacity or infrastructure-level analysis
 
-                        PARAMETERS:
-                        - snapshotDate (LocalDate) [required]
-                          Description: Snapshot date used for aggregation.
-                          How to use: Must correspond to an existing snapshot.
-                          Example: 2026-02-15
+      WHEN NOT TO USE:
+      - Do NOT use for per-global analysis
+      - Do NOT use without a known snapshot date
+      - Do NOT use for historical trends across multiple dates
 
-                        RULES:
-                        - Only call this tool if the snapshot date is explicitly known.
-                        - Never invent or assume dates.
-                        - If the user refers to relative dates, resolve them explicitly first.
+      PARAMETERS:
+      - snapshotDate (LocalDate) [required]
+        Description: Snapshot date used for aggregation.
+        How to use: Must correspond to an existing snapshot.
+        Example: 2026-02-15
 
-                        OUTPUT:
-                        Returns a map where:
-                        - key   = database location
-                        - value = aggregated metrics:
-                                  usedMB, allocatedMB, growthMB
-                        """)
+      RULES:
+      - Only call this tool if the snapshot date is explicitly known.
+      - Never invent or assume dates.
+      - If the user refers to relative dates, resolve them explicitly first.
 
-        @Nonnull
-        public Map<String, Map<String, BigDecimal>> diskSUMGrowthByLocation(
-                        LocalDate snapshotDate) {
+      OUTPUT:
+      Returns a map where:
+      - key   = database location
+      - value = aggregated metrics:
+                usedMB, allocatedMB, growthMB
+      """)
 
-                List<Object[]> rows = em.createQuery("""
-                                SELECT
-                                        Location,
-                                        SUM(UsedMB),
-                                        SUM(AllocatedMB),
-                                        SUM(GrowthMB)
-                                    FROM guard.GlobalSnapshot
-                                    WHERE SnapshotDate = :dt
-                                    GROUP BY Location
-                                """, Object[].class)
-                                .setParameter("dt", snapshotDate)
-                                .getResultList();
+  @Nonnull
+  public Map<String, Map<String, BigDecimal>> diskSUMGrowthByLocation(
+      LocalDate snapshotDate) {
 
-                Map<String, Map<String, BigDecimal>> result = new HashMap<>();
+    List<Object[]> rows = em.createQuery("""
+        SELECT
+                Location,
+                SUM(UsedMB),
+                SUM(AllocatedMB),
+                SUM(GrowthMB)
+            FROM guard.GlobalSnapshot
+            WHERE SnapshotDate = :dt
+            GROUP BY Location
+        """, Object[].class)
+        .setParameter("dt", snapshotDate)
+        .getResultList();
 
-                for (Object[] row : rows) {
-                        String location = (String) row[0];
+    Map<String, Map<String, BigDecimal>> result = new HashMap<>();
 
-                        BigDecimal usedMB = (BigDecimal) row[1];
-                        BigDecimal allocatedMB = (BigDecimal) row[2];
-                        BigDecimal growthMB = (BigDecimal) row[3];
+    for (Object[] row : rows) {
+      String location = (String) row[0];
 
-                        Map<String, BigDecimal> metrics = new HashMap<>();
-                        metrics.put("usedMB", usedMB);
-                        metrics.put("allocatedMB", allocatedMB);
-                        metrics.put("growthMB", growthMB);
+      BigDecimal usedMB = (BigDecimal) row[1];
+      BigDecimal allocatedMB = (BigDecimal) row[2];
+      BigDecimal growthMB = (BigDecimal) row[3];
 
-                        result.put(location, metrics);
-                }
+      Map<String, BigDecimal> metrics = new HashMap<>();
+      metrics.put("usedMB", usedMB);
+      metrics.put("allocatedMB", allocatedMB);
+      metrics.put("growthMB", growthMB);
 
-                return result;
-        }
+      result.put(location, metrics);
+    }
+
+    return result;
+  }
 
 }
