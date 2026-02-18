@@ -1,0 +1,63 @@
+<style>
+    .message {
+        /* border: 1px solid black; */
+        display: flex;
+        flex-direction: row;
+        border-radius: 5px;
+        margin: 3px 0px;
+    }
+
+    .left {
+        justify-content: flex-start;
+    }
+
+    .right {
+        justify-content: flex-end;
+    }
+
+    .left .message-container {
+        background-color: #ececec;
+        border-radius: 5px;
+        color: #1C1C1C;
+    }
+
+    .right .message-container {
+        background-color: #579ffb;
+        border-radius: 5px;
+        color: #fff;
+    }
+
+    .message .message-container {
+        justify-self: end;
+        border-radius: 5px;
+        min-width: 70px;
+        max-width: 400px;
+        /* padding:10px; */
+    }
+
+    .speaker-info {
+        display: flex;
+        justify-content: space-between;
+        /* padding: 5px 10px 0px 10px; */
+        /* border: 1px solid black; */
+    }
+
+    .message p {
+        margin: 10px;
+        /* padding: 0px 0px; */
+    }
+</style>
+<div class='message {{type_of_message}}'>
+    <div class="message-container">
+        <div class="speaker-info">
+            <div>
+                <p><b> @if (type_of_message == "left") { Watcher } @else { User } </b></p>
+            </div>
+            <div>
+                <p>{{message()?.timestamp | date: 'HH:mm'}}</p>                
+            </div>
+        </div>
+        <p>{{message()?.content}}</p>
+    </div>
+
+</div>
