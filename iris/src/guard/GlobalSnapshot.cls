@@ -23,13 +23,19 @@ Property AllocatedMB As %String;
 
 Property UsedMB As %String;
 
+Index IdxUsedMB On UsedMB;
+
 Property Tables As %String(MAXLEN = 1000);
 
 Property PrevSnapshotId As %Integer;
 
 Property GrowthMB As %String;
 
+Index IdxGrowthMB On GrowthMB;
+
 Property GrowthPct As %String;
+
+Index IdxGrowthPct On GrowthPct;
 
 Storage Default
 {
