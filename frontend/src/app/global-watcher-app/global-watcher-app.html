@@ -1,0 +1,38 @@
+<style>
+    .container{
+        /* border:1px solid black; */
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        height: 600px;
+        width: 700px;
+        margin: 50px auto;
+        border-radius: 10px;
+        box-shadow: 2px 2px 15px;
+        padding:20px;
+    }
+    .chat-container{               
+        flex: 8;
+        border:1px solid pink;
+        border-radius: 10px;
+        min-height: 0;
+    }
+    .input-container{
+        flex: 2;
+        border: 1px solid pink;
+        border-radius: 10px;
+    }    
+    :host{
+        display: flex;
+        flex-direction: column;
+    }
+</style>
+
+<div class="container">
+    <div class="chat-container">
+        <global-watcher-chat [list_of_messages]="list_of_messages$ | async"></global-watcher-chat>
+    </div>
+    <div class="input-container">
+        <global-watcher-chat-input (messageSentEvent)="OnMessageSent($event)"></global-watcher-chat-input>
+    </div>
+</div>

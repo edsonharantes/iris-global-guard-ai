@@ -1,0 +1,29 @@
+<style>
+    :host {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0; 
+    }
+
+    .container {        
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;        
+        gap: 0px;
+        overflow-y: auto;
+        /* scrollbar-gutter: ; */
+        scrollbar-gutter: stable;
+        min-height: 0;
+        box-sizing: border-box;
+        padding:10px;
+    }
+</style>
+<div class="container" #container>
+
+    @for (message of list_of_messages(); track $index) {
+        <!-- teste: {{message.sender}}: {{message.content}} -->
+        <global-watcher-chat-message [message]="message"></global-watcher-chat-message>
+    }
+
+</div>
