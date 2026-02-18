@@ -21,14 +21,15 @@ export class ConversationService {
       sender:sender,
       timestamp: new Date()
     };
+    
+    console.log("Current conversation:", this.WholeConversation);
+    this.list_of_messages.next([...this.WholeConversation,  messageObj]);
     this.WholeConversation.push(messageObj);
-    this.list_of_messages.next(this.WholeConversation);
 
     return messageObj;
   }
 
   addUserMessage(message: string): void {
-
     console.log("Adding user message to conversation service: " + message);
     this.sendUserMessage(this.addMessageToConversation(message, MessageSender.User));
   }
@@ -47,9 +48,9 @@ export class ConversationService {
   requestWatcherResponse(userMessage: Message): void {
     
     this.addBotMessage("Resposta do bot... (esta é uma resposta fixa para teste, substitua pela resposta real da API)");
-    // this.http.get("https://webhook.site/bdd9a6dd-f9ec-479a-83e0-940ed5050583", { responseType: 'text' }).subscribe(response => {
+    // this.http.get("https://webhook.site/02cf91b9-6e46-4a70-8684-537d4ce08aeb", { responseType: 'text' }).subscribe(response => {
     //   console.log("Watcher response received:", response);
-    //   // this.addMessageToConversation(response);
+    //   this.addBotMessage(response);
     // }, error => {
     //   console.error("Error fetching watcher response:", error);
     // });

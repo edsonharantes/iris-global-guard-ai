@@ -32,6 +32,10 @@
         border-radius: 5px;
         min-width: 70px;
         max-width: 400px;
+        word-wrap: break-word;
+        /* legacy */
+        overflow-wrap: break-word;
+        /* modern */
         /* padding:10px; */
     }
 
@@ -44,7 +48,17 @@
 
     .message p {
         margin: 10px;
+        white-space: pre-wrap;
+        /* preserves \n and wraps */
+        word-break: break-word;
         /* padding: 0px 0px; */
+    }
+    .timestamp p {
+        font-size: 0.8em;
+        line-height: 19px;       
+    }
+    .content {
+       font-size: 0.9em;
     }
 </style>
 <div class='message {{type_of_message}}'>
@@ -53,11 +67,11 @@
             <div>
                 <p><b> @if (type_of_message == "left") { Watcher } @else { User } </b></p>
             </div>
-            <div>
-                <p>{{message()?.timestamp | date: 'HH:mm'}}</p>                
+            <div class="timestamp">
+                <p>{{message()?.timestamp | date: 'HH:mm'}}</p>
             </div>
         </div>
-        <p>{{message()?.content}}</p>
+        <p class="content">{{message()?.content}}</p>
     </div>
 
 </div>

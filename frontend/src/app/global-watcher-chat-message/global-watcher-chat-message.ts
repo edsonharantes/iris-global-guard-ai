@@ -11,6 +11,15 @@ import { MessageSender } from '@shared/models/enums/message-sender.enum';
 })
 export class GlobalWatcherChatMessage {
   readonly message = input<Message | null>();
-  type_of_message = this.message()?.sender === MessageSender.Watcher ? 'left' : 'right';
+  type_of_message: string = '';
+  
   user = this.message()?.sender === MessageSender.Watcher ? 'Watcher' : 'User';
+
+  ngOnInit() {
+    if (this.message()?.sender === MessageSender.Watcher) {
+      this.type_of_message = 'left';
+    } else {
+      this.type_of_message = 'right';
+    }
+  }
 }

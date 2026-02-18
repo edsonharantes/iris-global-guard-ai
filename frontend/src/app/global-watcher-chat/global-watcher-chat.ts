@@ -18,9 +18,21 @@ export class GlobalWatcherChat {
   ngOnInit() {
     console.log("list of messages in chat: " + this.list_of_messages);
   }
-  
   scrollToBottom() {
     const el = this.chatContainer.nativeElement;
     el.scrollTop = el.scrollHeight;
+
+    console.log("Scrolled to bottom of chat container");
+  }
+  private lastLength = 0;
+
+  ngAfterViewChecked() {
+    console.log("ngAfterViewChecked");
+    if (this.list_of_messages()?.length !== this.lastLength) {
+      this.lastLength = this.list_of_messages()?.length || 0;
+      this.scrollToBottom();
+    }
+
+
   }
 }
