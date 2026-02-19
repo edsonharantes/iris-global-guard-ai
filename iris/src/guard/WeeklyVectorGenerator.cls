@@ -32,6 +32,8 @@ ClassMethod run(windowDays As %Integer = 90) [ Language = python ]
     select_stmt = iris.sql.prepare(sql)
     rs = select_stmt.execute(from_date)
 
+    print(rs)
+
     insert_stmt = iris.sql.prepare("""
             INSERT INTO guard.GlobalGrowthProfile
             (GlobalName, Location, WindowDays, FromDate, ToDate, WeeklyVector,
@@ -42,7 +44,7 @@ ClassMethod run(windowDays As %Integer = 90) [ Language = python ]
                 AVGFri,
                 AVGSat,
                 AVGSun)
-            VALUES (?, ?, ?, ?, ?, TO_VECTOR(?, float), ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, TO_VECTOR(?, DOUBLE), ?, ?, ?, ?, ?, ?, ?)
     """)
 
     for idx, row in enumerate(rs):
@@ -69,7 +71,7 @@ ClassMethod run(windowDays As %Integer = 90) [ Language = python ]
 
         normalized = [v / total for v in values]
 
-        vector_str = "" + ",".join(f"{v:.6f}" for v in normalized) + ""
+        vector_str = "[" + ",".join(f"{v:.6f}" for v in normalized) + "]"
         print(f"  Weekly Vector: {vector_str}")
         print(f"  Averages: Mon={row[2]}, Tue={row[3]}, Wed={row[4]}, Thu={row[5]}, Fri={row[6]}, Sat={row[7]}, Sun={row[8]}")
         insert_stmt.execute(

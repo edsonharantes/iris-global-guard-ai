@@ -25,7 +25,7 @@ Property AVGSat As %String;
 
 Property AVGSun As %String;
 
-Property WeeklyVector As %Vector;
+Property WeeklyVector As %Vector(DATATYPE = "DOUBLE", LEN = 7);
 
 Storage Default
 {

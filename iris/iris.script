@@ -4,4 +4,8 @@ do ##class(Security.Users).UnExpireUserPasswords("*")
 
 zn "%SYS"
 do $System.OBJ.Import("/opt/irisapp/src","cuk")
+
+Do ##class(guard.SnapshotGenerator).run()
+Do ##class(guard.WeeklyVectorGenerator).run()
+
 halt
