@@ -275,6 +275,7 @@ public class GlobalRepositoryTools {
       useful for capacity planning and storage monitoring.
 
       WHEN TO USE:
+      - Get information about disks location-level growth and usage
       - When the user asks about disk usage per database or location
       - When comparing growth across storage locations
       - When analyzing which disk or database is consuming more space
