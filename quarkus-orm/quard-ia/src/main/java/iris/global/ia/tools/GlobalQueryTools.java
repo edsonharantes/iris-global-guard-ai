@@ -65,7 +65,6 @@ public class GlobalQueryTools {
                 Returns a list of globals with metadata fields:
                 name, location, hasData, hasSubscripts, journal, collation.
             """)
-
     @Nonnull
     @SuppressWarnings("null")
     public List<Map<String, Object>> listGlobalsInNamespace(String namespace, String globalNamePattern) {
@@ -131,7 +130,7 @@ public class GlobalQueryTools {
             How to use:
                 - "*" to analyze all globals in the location
                 - Prefix-based filtering using "*"
-            Example: "*", "Ens*", "MyApp*"
+            Example: "*", "Ens*", "MyApp.*"
 
             RULES:
             - Only call this tool if the database location is explicitly known.

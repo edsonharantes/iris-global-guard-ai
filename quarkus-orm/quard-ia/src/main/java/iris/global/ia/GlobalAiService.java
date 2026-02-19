@@ -4,11 +4,12 @@ import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.UserMessage;
 import io.quarkiverse.langchain4j.RegisterAiService;
+import iris.global.ia.tools.DateTools;
 import iris.global.ia.tools.GlobalQueryTools;
 import iris.global.ia.tools.GlobalRepositoryTools;
 
 @RegisterAiService(chatMemoryProviderSupplier = ChatMemoryProviderFactory.class, tools = { GlobalRepositoryTools.class,
-        GlobalQueryTools.class })
+        GlobalQueryTools.class , DateTools.class})
 public interface GlobalAiService {
     @SystemMessage("""
                 You are **Global Guard AI**, a database observability assistant specialized in **InterSystems IRIS globals**.
